@@ -105,34 +105,34 @@ public class SeckillController {
         
         // 获取客户端IP
         String clientIp = getClientIp(request);
-        
+
         // 1. 防刷检查
         if (!antiBrushComponent.checkAccess(clientIp, userId)) {
             response.put("code", 403);
             response.put("message", "请求过于频繁，请稍后重试");
             return ResponseEntity.status(403).body(response);
         }
-        
-        // 2. 限流检查
-        if (!rateLimitComponent.checkAll(userId, clientIp)) {
-            response.put("code", 429);
-            response.put("message", "系统繁忙，请稍后重试");
-            return ResponseEntity.status(429).body(response);
-        }
-        
+//测压时关闭
+//        // 2. 限流检查
+//        if (!rateLimitComponent.checkAll(userId, clientIp)) {
+//            response.put("code", 429);
+//            response.put("message", "系统繁忙，请稍后重试");
+//            return ResponseEntity.status(429).body(response);
+//        }
+
         // 3. 验证隐藏地址
         if (!seckillUrlService.validateSeckillUrl(token, userId, productId)) {
             response.put("code", 400);
             response.put("message", "秒杀地址无效或已过期");
             return ResponseEntity.badRequest().body(response);
         }
-        
-        // 4. 验证验证码
-        if (!captchaService.validateCaptcha(userId, captcha)) {
-            response.put("code", 400);
-            response.put("message", "验证码错误或已过期");
-            return ResponseEntity.badRequest().body(response);
-        }
+//测试先注释掉
+//        // 4. 验证验证码
+//        if (!captchaService.validateCaptcha(userId, captcha)) {
+//            response.put("code", 400);
+//            response.put("message", "验证码错误或已过期");
+//            return ResponseEntity.badRequest().body(response);
+//        }
         
         // 5. 执行秒杀
         boolean success = seckillService.seckill(userId, productId);

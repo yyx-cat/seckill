@@ -17,12 +17,16 @@ CREATE TABLE IF NOT EXISTS seckill_product (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   product_id BIGINT NOT NULL,
   seckill_price DECIMAL(10,2) NOT NULL,
-  stock INT NOT NULL COMMENT '秒杀可用库存',
+  seckill_stock INT NOT NULL COMMENT '秒杀可用库存',
   start_time DATETIME NOT NULL,
   end_time DATETIME NOT NULL,
+  status TINYINT DEFAULT 0 COMMENT '状态：0-未开始，1-进行中，2-已结束',
   version INT DEFAULT 0 COMMENT '乐观锁版本号（为后续预留）',
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (product_id) REFERENCES product(id),
-  INDEX idx_product_id (product_id)
+  INDEX idx_product_id (product_id),
+  INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 订单表
@@ -59,8 +63,8 @@ CREATE TABLE IF NOT EXISTS local_message (
 INSERT INTO product (name, price, stock) VALUES ('iPhone 15 Pro', 8999.00, 100);
 INSERT INTO product (name, price, stock) VALUES ('MacBook Pro', 14999.00, 50);
 
-INSERT INTO seckill_product (product_id, seckill_price, stock, start_time, end_time) 
-VALUES (1, 5999.00, 10, NOW(), DATE_ADD(NOW(), INTERVAL 1 HOUR));
+INSERT INTO seckill_product (product_id, seckill_price, seckill_stock, start_time, end_time, status) 
+VALUES (1, 5999.00, 10, NOW(), DATE_ADD(NOW(), INTERVAL 1 HOUR), 1);
 
-INSERT INTO seckill_product (product_id, seckill_price, stock, start_time, end_time) 
-VALUES (2, 9999.00, 5, NOW(), DATE_ADD(NOW(), INTERVAL 1 HOUR));
+INSERT INTO seckill_product (product_id, seckill_price, seckill_stock, start_time, end_time, status) 
+VALUES (2, 9999.00, 5, NOW(), DATE_ADD(NOW(), INTERVAL 1 HOUR), 1);

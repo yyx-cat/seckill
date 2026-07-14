@@ -4,8 +4,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -55,6 +58,9 @@ public class AntiBrushComponent {
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
+
+    @Autowired
+    private RedisScript<Long> antiBrushScript;
 
     /**
      * 检查IP是否在黑名单中
@@ -111,7 +117,7 @@ public class AntiBrushComponent {
     }
 
     /**
-     * 检查访问频率
+     * 检查访问频率（使用Lua脚本保证原子性）
      * @param key Redis key
      * @param maxCount 最大访问次数
      * @param windowSeconds 时间窗口（秒）
@@ -119,11 +125,13 @@ public class AntiBrushComponent {
      */
     private boolean checkAccess(String key, int maxCount, int windowSeconds) {
         try {
-            Long count = redisTemplate.opsForValue().increment(key);
+            List<String> keys = Arrays.asList(key);
             
-            if (count == 1) {
-                redisTemplate.expire(key, windowSeconds, TimeUnit.SECONDS);
-            }
+            Long count = redisTemplate.execute(
+                antiBrushScript,
+                keys,
+                String.valueOf(windowSeconds)
+            );
 
             if (count > maxCount) {
                 logger.warn("访问过于频繁：key={}, 次数={}", key, count);

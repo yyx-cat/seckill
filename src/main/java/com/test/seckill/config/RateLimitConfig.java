@@ -39,21 +39,71 @@ public class RateLimitConfig {
 
         "redis.call('set', tokenKey, newTokens) " +
         "redis.call('set', timeKey, now) " +
-        "local ttl = math.ceil(capacity / rate) * 2 " +
+        "local ttl = 3600 " +
         "redis.call('expire', tokenKey, ttl) " +
         "redis.call('expire', timeKey, ttl) " +
 
         "return allowed";
 
     /**
-     * 令牌桶限流脚本Bean
-     * @return RedisScript实例
-     */
-    @Bean
-    public RedisScript<Long> tokenBucketScript() {
-        DefaultRedisScript<Long> script = new DefaultRedisScript<>();
-        script.setScriptText(TOKEN_BUCKET_SCRIPT);
-        script.setResultType(Long.class);
-        return script;
-    }
+ * 令牌桶限流脚本Bean
+ * @return RedisScript实例
+ */
+@Bean
+public RedisScript<Long> tokenBucketScript() {
+    DefaultRedisScript<Long> script = new DefaultRedisScript<>();
+    script.setScriptText(TOKEN_BUCKET_SCRIPT);
+    script.setResultType(Long.class);
+    return script;
+}
+
+/**
+ * 库存扣减Lua脚本
+ * KEYS[1]: 库存key
+ * ARGV[1]: 扣减数量
+ * 返回值: 1-扣减成功, 0-库存不足
+ */
+private static final String STOCK_DEDUCT_SCRIPT =
+    "local stock = redis.call('get', KEYS[1]) " +
+    "if stock and tonumber(stock) > 0 then " +
+    "    redis.call('decr', KEYS[1]) " +
+    "    return 1 " +
+    "else " +
+    "    return 0 " +
+    "end";
+
+/**
+ * 库存扣减脚本Bean
+ * @return RedisScript实例
+ */
+@Bean
+public RedisScript<Long> stockDeductScript() {
+    DefaultRedisScript<Long> script = new DefaultRedisScript<>();
+    script.setScriptText(STOCK_DEDUCT_SCRIPT);
+    script.setResultType(Long.class);
+    return script;
+}
+
+/**
+ * 防刷计数器Lua脚本
+ * KEYS[1]: 计数key
+ * ARGV[1]: 过期时间（秒）
+ * 返回值: 当前计数
+ */
+private static final String ANTI_BRUSH_SCRIPT =
+    "local count = redis.call('incr', KEYS[1]) " +
+    "redis.call('expire', KEYS[1], ARGV[1]) " +
+    "return count";
+
+/**
+ * 防刷计数器脚本Bean
+ * @return RedisScript实例
+ */
+@Bean
+public RedisScript<Long> antiBrushScript() {
+    DefaultRedisScript<Long> script = new DefaultRedisScript<>();
+    script.setScriptText(ANTI_BRUSH_SCRIPT);
+    script.setResultType(Long.class);
+    return script;
+}
 }
