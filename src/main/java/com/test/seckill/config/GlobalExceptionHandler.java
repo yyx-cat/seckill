@@ -27,12 +27,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<Map<String, Object>> handleBusinessException(BusinessException e) {
         logger.warn("业务异常：{}", e.getMessage());
-        
         Map<String, Object> response = new HashMap<>();
-        response.put("code", e.getCode());
+        response.put("code", e.getCode());   // 例如 400
         response.put("message", e.getMessage());
-        
-        return ResponseEntity.badRequest().body(response);
+        // 关键：返回 HTTP 200，而不是 400
+        return ResponseEntity.ok(response);
     }
 
     /**

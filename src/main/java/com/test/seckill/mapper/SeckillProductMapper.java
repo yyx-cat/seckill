@@ -15,7 +15,18 @@ public interface SeckillProductMapper {
      * @param id 秒杀商品ID
      * @return 秒杀商品对象
      */
-    @Select("SELECT * FROM seckill_product WHERE id = #{id}")
+    @Select("SELECT id, product_id, seckill_price, seckill_stock, start_time, end_time, status, create_time, update_time FROM seckill_product WHERE id = #{id}")
+    @Results({
+        @Result(property = "id", column = "id"),
+        @Result(property = "productId", column = "product_id"),
+        @Result(property = "seckillPrice", column = "seckill_price"),
+        @Result(property = "seckillStock", column = "seckill_stock"),
+        @Result(property = "startTime", column = "start_time"),
+        @Result(property = "endTime", column = "end_time"),
+        @Result(property = "status", column = "status"),
+        @Result(property = "createTime", column = "create_time"),
+        @Result(property = "updateTime", column = "update_time")
+    })
     SeckillProduct selectById(Long id);
     
     /**
@@ -23,14 +34,36 @@ public interface SeckillProductMapper {
      * @param productId 商品ID
      * @return 秒杀商品对象
      */
-    @Select("SELECT * FROM seckill_product WHERE product_id = #{productId} AND status = 1")
+    @Select("SELECT id, product_id, seckill_price, seckill_stock, start_time, end_time, status, create_time, update_time FROM seckill_product WHERE product_id = #{productId} AND status = 1")
+    @Results({
+        @Result(property = "id", column = "id"),
+        @Result(property = "productId", column = "product_id"),
+        @Result(property = "seckillPrice", column = "seckill_price"),
+        @Result(property = "seckillStock", column = "seckill_stock"),
+        @Result(property = "startTime", column = "start_time"),
+        @Result(property = "endTime", column = "end_time"),
+        @Result(property = "status", column = "status"),
+        @Result(property = "createTime", column = "create_time"),
+        @Result(property = "updateTime", column = "update_time")
+    })
     SeckillProduct selectByProductId(Long productId);
     
     /**
      * 查询所有进行中的秒杀商品
      * @return 秒杀商品列表
      */
-    @Select("SELECT * FROM seckill_product WHERE status = 1")
+    @Select("SELECT id, product_id, seckill_price, seckill_stock, start_time, end_time, status, create_time, update_time FROM seckill_product WHERE status = 1")
+    @Results({
+        @Result(property = "id", column = "id"),
+        @Result(property = "productId", column = "product_id"),
+        @Result(property = "seckillPrice", column = "seckill_price"),
+        @Result(property = "seckillStock", column = "seckill_stock"),
+        @Result(property = "startTime", column = "start_time"),
+        @Result(property = "endTime", column = "end_time"),
+        @Result(property = "status", column = "status"),
+        @Result(property = "createTime", column = "create_time"),
+        @Result(property = "updateTime", column = "update_time")
+    })
     List<SeckillProduct> selectActiveSeckillProducts();
     
     /**

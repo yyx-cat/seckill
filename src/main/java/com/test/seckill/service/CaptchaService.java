@@ -57,8 +57,7 @@ public class CaptchaService {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
-    @Autowired
-    private Random random;
+    private final Random random = new Random();
 
     /**
      * 生成验证码图片

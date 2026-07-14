@@ -16,9 +16,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -67,6 +70,9 @@ public class SeckillService {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private RedisScript<Long> stockDeductScript;
+
     /**
      * 执行秒杀
      * 1. 获取分布式锁
@@ -99,26 +105,21 @@ public class SeckillService {
             throw new BusinessException("秒杀商品不存在");
         }
 
-        // 2. 检查秒杀是否开始
-        if (!isSeckillStarted(seckillProduct)) {
-            throw new BusinessException("秒杀尚未开始");
+        // 2. 检查秒杀是否处于活动状态
+        if (!isSeckillActive(seckillProduct)) {
+            throw new BusinessException("秒杀尚未开始或已结束");
         }
 
-        // 3. 检查秒杀是否结束
-        if (!isSeckillEnded(seckillProduct)) {
-            throw new BusinessException("秒杀已结束");
-        }
-
-        // 4. Redis扣库存（原子操作）
+        // 3. Redis扣库存（原子操作）
         boolean success = deductStock(productId);
         if (!success) {
             throw new BusinessException("库存不足");
         }
 
-        // 5. 创建本地消息（用于分布式事务最终一致性）
+        // 4. 创建本地消息（用于分布式事务最终一致性）
         LocalMessage localMessage = createLocalMessage(userId, productId, seckillProduct.getId());
 
-        // 6. 发送MQ消息（异步创建订单）
+        // 5. 发送MQ消息（异步创建订单）
         sendSeckillMessage(userId, productId, seckillProduct.getId(), localMessage.getId());
 
         logger.info("秒杀成功：userId={}, productId={}", userId, productId);
@@ -146,37 +147,32 @@ public class SeckillService {
     }
 
     /**
-     * 检查秒杀是否开始
+     * 检查秒杀是否处于活动状态
+     * 判断当前时间是否在开始时间之后且结束时间之前
      * @param seckillProduct 秒杀商品
-     * @return true表示已开始
+     * @return true表示秒杀进行中，false表示尚未开始或已结束
      */
-    private boolean isSeckillStarted(SeckillProduct seckillProduct) {
-        return new Date().after(seckillProduct.getStartTime());
+    private boolean isSeckillActive(SeckillProduct seckillProduct) {
+        Date now = new Date();
+        return now.after(seckillProduct.getStartTime()) && now.before(seckillProduct.getEndTime());
     }
 
     /**
-     * 检查秒杀是否结束
-     * @param seckillProduct 秒杀商品
-     * @return false表示已结束
-     */
-    private boolean isSeckillEnded(SeckillProduct seckillProduct) {
-        return new Date().before(seckillProduct.getEndTime());
-    }
-
-    /**
-     * Redis扣库存（原子操作）
+     * Redis扣库存（原子操作，使用Lua脚本保证原子性）
      * @param productId 商品ID
      * @return true表示扣减成功，false表示库存不足
      */
     private boolean deductStock(Long productId) {
         String stockKey = STOCK_KEY + productId;
-        Long stock = redisTemplate.opsForValue().decrement(stockKey);
-        if (stock == null || stock < 0) {
-            // 库存不足，回滚
-            redisTemplate.opsForValue().increment(stockKey);
-            return false;
-        }
-        return true;
+        List<String> keys = Arrays.asList(stockKey);
+        
+        Long result = redisTemplate.execute(
+            stockDeductScript,
+            keys,
+            "1"
+        );
+        
+        return result != null && result == 1;
     }
 
     /**
